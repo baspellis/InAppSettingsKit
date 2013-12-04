@@ -136,7 +136,10 @@ CGRect IASKCGRectSwap(CGRect rect);
 - (void) viewDidLoad {
     [super viewDidLoad];
     if ([self isPad]) {
-        self.tableView.separatorStyle = UITableViewCellSeparatorStyleSingleLineEtched;
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 70000
+        if (floor(NSFoundationVersionNumber) <= NSFoundationVersionNumber_iOS_6_1)	// don't use etched style on iOS 7
+#endif
+            self.tableView.separatorStyle = UITableViewCellSeparatorStyleSingleLineEtched;
     }
     UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(singleTapToEndEdit:)];   
     tapGesture.cancelsTouchesInView = NO;
@@ -190,8 +193,8 @@ CGRect IASKCGRectSwap(CGRect rect);
 	[super viewDidAppear:animated];
 
 	NSNotificationCenter *dc = [NSNotificationCenter defaultCenter];
-	IASK_IF_IOS4_OR_GREATER([dc addObserver:self selector:@selector(synchronizeSettings) name:UIApplicationDidEnterBackgroundNotification object:[UIApplication sharedApplication]];);
-	IASK_IF_IOS4_OR_GREATER([dc addObserver:self selector:@selector(reload) name:UIApplicationWillEnterForegroundNotification object:[UIApplication sharedApplication]];);
+	[dc addObserver:self selector:@selector(synchronizeSettings) name:UIApplicationDidEnterBackgroundNotification object:[UIApplication sharedApplication]];
+	[dc addObserver:self selector:@selector(reload) name:UIApplicationWillEnterForegroundNotification object:[UIApplication sharedApplication]];
 	[dc addObserver:self selector:@selector(synchronizeSettings) name:UIApplicationWillTerminateNotification object:[UIApplication sharedApplication]];
 }
 
@@ -201,7 +204,11 @@ CGRect IASKCGRectSwap(CGRect rect);
 }
 
 - (void)viewDidDisappear:(BOOL)animated {
-	[[NSNotificationCenter defaultCenter] removeObserver:self];
+	NSNotificationCenter *dc = [NSNotificationCenter defaultCenter];
+	[dc removeObserver:self name:NSUserDefaultsDidChangeNotification object:dc];
+	[dc removeObserver:self name:UIApplicationDidEnterBackgroundNotification object:[UIApplication sharedApplication]];
+	[dc removeObserver:self name:UIApplicationWillEnterForegroundNotification object:[UIApplication sharedApplication]];
+	[dc removeObserver:self name:UIApplicationWillTerminateNotification object:[UIApplication sharedApplication]];
 
     // hide the keyboard
     [self.currentFirstResponder resignFirstResponder];
@@ -404,7 +411,7 @@ CGRect IASKCGRectSwap(CGRect rect);
 		CGSize size = [title sizeWithFont:[UIFont boldSystemFontOfSize:[UIFont labelFontSize]] 
 						constrainedToSize:CGSizeMake(tableView.frame.size.width - 2*kIASKHorizontalPaddingGroupTitles, INFINITY)
 							lineBreakMode:NSLineBreakByWordWrapping];
-		return size.height+kIASKVerticalPaddingGroupTitles;
+		return roundf(size.height+kIASKVerticalPaddingGroupTitles);
 	}
 	return 0;
 }
@@ -677,6 +684,8 @@ CGRect IASKCGRectSwap(CGRect rect);
             MFMailComposeViewController *mailViewController = [[MFMailComposeViewController alloc] init];
             mailViewController.navigationBar.barStyle = self.navigationController.navigationBar.barStyle;
             mailViewController.navigationBar.tintColor = self.navigationController.navigationBar.tintColor;
+            mailViewController.navigationBar.titleTextAttributes =
+            self.navigationController.navigationBar.titleTextAttributes;
             
             if ([specifier localizedObjectForKey:kIASKMailComposeSubject]) {
                 [mailViewController setSubject:[specifier localizedObjectForKey:kIASKMailComposeSubject]];

@@ -69,12 +69,16 @@
     return [self.defaults doubleForKey:key];
 }
 
-- (int)integerForKey:(NSString*)key {
+- (NSInteger)integerForKey:(NSString*)key {
     return [self.defaults integerForKey:key];
 }
 
 - (id)objectForKey:(NSString*)key {
     return [self.defaults objectForKey:key];
+}
+
+- (void)removeObjectForKey:(NSString *)key {
+    [self.defaults removeObjectForKey:key];
 }
 
 - (BOOL)synchronize {
